@@ -287,3 +287,7 @@ About
 *.vob
 *.wmv
 *.webm
+
+
+# IGNORE DNN MODELS
+/dnn_model
