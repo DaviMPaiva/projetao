@@ -3,6 +3,9 @@ import math
 import numpy as np
 import os
 
+if not os.path.exists('frames_after'):
+    os.makedirs('frames_after')
+
 # Load the image
 img = cv2.imread('frames/frame_0000.png')
 

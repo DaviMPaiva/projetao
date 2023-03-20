@@ -291,3 +291,6 @@ About
 
 # IGNORE DNN MODELS
 /dnn_model
+
+*.csv
+*.txt

@@ -2,7 +2,7 @@ import cv2
 import os
 
 # Open the video file
-cap = cv2.VideoCapture('tiny_video.mp4')
+cap = cv2.VideoCapture('videos\parte1.mp4')
 
 # Create a directory to store the frames
 if not os.path.exists('frames'):
