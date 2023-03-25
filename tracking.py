@@ -82,23 +82,24 @@ with open('position_data.csv', 'w', newline='') as file:
 
                 detections.append([x1, y1, x2, y2, score])
         
-        tracker.update(frame, detections)
+        if len(detections) != 0:
+            tracker.update(frame, detections)
             
-        for track in tracker.tracks:
-            bbox = track.bbox
-            x1, y1, x2, y2 = bbox
-            track_id = track.track_id
+            for track in tracker.tracks:
+                bbox = track.bbox
+                x1, y1, x2, y2 = bbox
+                track_id = track.track_id
 
-            cx = int((x1 + x2)/2)
-            cy = int((y1 + y2)/2)
+                cx = int((x1 + x2)/2)
+                cy = int((y1 + y2)/2)
 
-            # store position data  
-            writer.writerow([cx, by, track_id])
-           
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                # store position data  
+                writer.writerow([cx, by, track_id])
+            
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-            cv2.circle(frame, (cx,cy), 5, (0, 0, 255), -1)
-            cv2.putText(frame, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
+                cv2.circle(frame, (cx,cy), 5, (0, 0, 255), -1)
+                cv2.putText(frame, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
         
         cv2.imshow("Frame", frame)
         
