@@ -62,6 +62,9 @@ for filename in os.listdir(folder_path):
 
         # Define the corners of the rectangular shape
         rect_pts = np.float32([[0, 0], [rect_width, 0], [rect_width, rect_height], [0, rect_height]])
+        print("================================================")
+        print(quad_pts)
+        print("================================================")
 
         # Compute the perspective transform matrix
         M = cv2.getPerspectiveTransform(quad_pts, rect_pts)
