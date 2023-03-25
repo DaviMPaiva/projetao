@@ -3,15 +3,23 @@ import numpy as np
 from object_detection import ObjectDetection
 import math
 import csv
+import os
+import time
+
+from tracker import Tracker
 
 # Initialize Object Detection
 od = ObjectDetection()
 
-cap = cv2.VideoCapture("output_video.mp4")
+cap = cv2.VideoCapture("videos/output_video.mp4")
 
 # Get the height and width of the video
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+video_out_path = os.path.join('.', 'out.mp4')
+cap_out = cv2.VideoWriter(video_out_path, cv2.VideoWriter_fourcc(*'MP4V'), cap.get(cv2.CAP_PROP_FPS),
+                          (width, height))
 
 with open('video_dimentions.txt', 'w') as f:
     # Write the height and width to the file
@@ -19,32 +27,40 @@ with open('video_dimentions.txt', 'w') as f:
     f.write("Video width: {}\n".format(width))
 f.close()
 
-# Initialize count
-count = 0
-center_points_prev_frame = []
+#Init tracker
+tracker = Tracker()
 
-tracking_objects = {}
-track_id = 0
+counter = 0
 
 #init file to write position data 
 with open('position_data.csv', 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(["x_pos", "y_pos"])
+    writer.writerow(["x_pos", "y_pos", "id"])
 
     #start detection and tracking loop
     while True:
         ret, frame = cap.read()
-        count += 1
+        
+        # skip some frames to increase performance
+        counter = counter + 1
+        if counter % 3 != 1:
+            continue
+
+        #start_time = time.time()
+        
         if not ret:
             break
 
         # Point current frame
         center_points_cur_frame = []
 
-        cv2.circle(frame, (0, 0), 5, (0, 0, 255), -1)
+        # cv2.circle(frame, (0, 0), 5, (0, 0, 255), -1)
 
         # Detect objects on frame
         (class_ids, scores, boxes) = od.detect(frame)
+
+        detections = []
+
         for class_id, score, box in zip(class_ids, scores, boxes):
             if od.classes[class_id] == 'person':    
                 print('class id = ', od.classes[class_id])
@@ -56,68 +72,39 @@ with open('position_data.csv', 'w', newline='') as file:
                 center_points_cur_frame.append((cx, cy))
                 #print("FRAME N°", count, " ", x, y, w, h)
 
+                x1 = int(x)
+                x2 = int(x+w)
+                y1 = int(y)
+                y2 = int(y+h)
+
                 # cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-                # store position data  
-                writer.writerow([cx, by])
-                
+                detections.append([x1, y1, x2, y2, score])
+        
+        tracker.update(frame, detections)
+            
+        for track in tracker.tracks:
+            bbox = track.bbox
+            x1, y1, x2, y2 = bbox
+            track_id = track.track_id
 
-        # Only at the beginning we compare previous and current frame
-        if count <= 2:
-            for pt in center_points_cur_frame:
-                for pt2 in center_points_prev_frame:
-                    distance = math.hypot(pt2[0] - pt[0], pt2[1] - pt[1])
+            cx = int((x1 + x2)/2)
+            cy = int((y1 + y2)/2)
 
-                    if distance < 10:
-                        tracking_objects[track_id] = pt
-                        track_id += 1
-        else:
+            # store position data  
+            writer.writerow([cx, by, track_id])
+           
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-            tracking_objects_copy = tracking_objects.copy()
-            center_points_cur_frame_copy = center_points_cur_frame.copy()
-
-            for object_id, pt2 in tracking_objects_copy.items():
-                object_exists = False
-                for pt in center_points_cur_frame_copy:
-                    distance = math.hypot(pt2[0] - pt[0], pt2[1] - pt[1])
-
-                    # Update IDs position
-                    # isso aqui da problema na nossa detecção
-                    # tem que ser uma comparação de distâncias mais eficiente
-                    if distance < 20:
-                        tracking_objects[object_id] = pt
-                        object_exists = True
-                        if pt in center_points_cur_frame:
-                            center_points_cur_frame.remove(pt)
-                        continue
-
-                # Remove IDs lost
-                if not object_exists:
-                    tracking_objects.pop(object_id)
-
-            # Add new IDs found
-            for pt in center_points_cur_frame:
-                tracking_objects[track_id] = pt
-                track_id += 1
-
-        for object_id, pt in tracking_objects.items():
-            cv2.circle(frame, pt, 5, (0, 0, 255), -1)
-            cv2.putText(frame, str(object_id), (pt[0], pt[1] - 7), 0, 1, (0, 0, 255), 2)
-
-        print("Tracking objects")
-        print(tracking_objects)
-
-
-        print("CUR FRAME LEFT PTS")
-        print(center_points_cur_frame)
-
-
+            cv2.circle(frame, (cx,cy), 5, (0, 0, 255), -1)
+            cv2.putText(frame, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
+        
         cv2.imshow("Frame", frame)
-
-        # Make a copy of the points
-        center_points_prev_frame = center_points_cur_frame.copy()
-
+        
+        #end_time = time.time() - start_time
+        #print(end_time)
+        
         key = cv2.waitKey(1)
         if key == 27:
             break
