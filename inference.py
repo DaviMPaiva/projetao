@@ -1,12 +1,12 @@
 import cv2
 import time
-from object_detection import ObjectDetection
+from old_pipeline.object_detection import ObjectDetection
 import matplotlib.pyplot as plt
 import numpy as np
 import threading
 import pickle
 import json
-from tracker import Tracker
+from old_pipeline.tracker import Tracker
 
 class Inference(threading.Thread):
     def __init__(self, path1, path2,data):
@@ -62,12 +62,12 @@ class Inference(threading.Thread):
 
                 ids.append({"point":(cx,cy),"id":track_id})
 
-                cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                cv2.circle(frame_rec, (cx,cy), 5, (0, 0, 255), -1)
+                #cv2.circle(frame_rec, (cx,cy), 5, (0, 0, 255), -1)
                 #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
             
-            cv2.imshow("Frame", frame_rec)
+            #cv2.imshow("Frame", frame_rec)
             return ids
     
     def GetCorners(self,img):
@@ -202,7 +202,6 @@ class Inference(threading.Thread):
         capture2.release()
         cv2.destroyAllWindows()
 
-
 class Data:
     def __init__(self,lock):
         # Create the final_frame array as a private variable
@@ -216,6 +215,7 @@ class Data:
         try:
             # Modify the array
             self.final_frame.append(data)
+            print(self.final_frame)
         finally:
             # Release the lock
             self.lock.release()
@@ -233,6 +233,7 @@ class Data:
 
 lock = threading.Lock()
 data = Data(lock)
+
 
 #np.save("points", final_frame)
 my_thread = Inference('guga1.mp4', 'guga2.mp4', data)
