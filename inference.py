@@ -10,7 +10,7 @@ from old_pipeline.tracker import Tracker
 from player import Player
 
 class Inference(threading.Thread):
-    def __init__(self, path1, path2,data):
+    def __init__(self, path1, path2,data,vs1,vs2,isStream):
         threading.Thread.__init__(self)
         self.path1 = path1
         self.path2 = path2
@@ -19,7 +19,9 @@ class Inference(threading.Thread):
         #Init tracker
         self.tracker = Tracker()
         self.data = data
-
+        self.vs1 = vs1
+        self.vs2 = vs2
+        self.isStream = isStream
 
     def GetInference(self,frame_rec):
             center_points_cur_frame = []
@@ -63,13 +65,16 @@ class Inference(threading.Thread):
 
                     ids.append({"point":(cx,by),"id":track_id})
 
-                    #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                    #cv2.circle(frame_rec, (cx,cy), 5, (0, 0, 255), -1)
+                    cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
                     #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
                 
-                #cv2.imshow("Frame", frame_rec)
+                cv2.imshow("Frame", frame_rec)
                 return ids
+            else:
+                cv2.imshow("Frame", frame_rec)
+                return []
     
     def GetCorners(self,img):
         height, width, _ = img.shape
@@ -126,13 +131,11 @@ class Inference(threading.Thread):
 
     def run(self) -> None:
         # Set up video capture
-        #capture = cv2.VideoCapture("http://192.168.1.67:8080/video")
         capture1 = cv2.VideoCapture(self.path1)
-
         capture2 = cv2.VideoCapture(self.path2)
         # Set up variables for timing
         prev_time = 0
-        interval = 56
+        interval = 1
 
         ids_frames = []
         corners1 = []
@@ -141,31 +144,34 @@ class Inference(threading.Thread):
         frame_counter = 0
         while True:
             # Read frame from video stream
-            ret1, frame1 = capture1.read()
-            
-            #the second camera
-            ret2, frame2 = capture2.read()
+            if self.isStream:
+                ret1, frame1 = self.vs1.read()#capture1.read()
+                ret2, frame2 = self.vs2.read()#capture1.read()
+            else:
+                ret1, frame1 = capture1.read()
+                ret2, frame2 = capture2.read()  
 
             # Check if frame was successfully read
-            if not ret1 or not ret2:
+            if not ret2 or not ret1:
                 continue #if there is a missing frame
 
-            current_time1 = capture1.get(cv2.CAP_PROP_POS_MSEC)
+            current_time1 = time.time()
 
             height = 720
             width = 1280
             
             #ask for the four points
-            if(current_time1==0):
+            if(frame_counter==0):
                 image1_resized = cv2.resize(frame1, (width, height))
                 image2_resized = cv2.resize(frame2, (width, height))
                 corners1 = self.GetCorners(image1_resized)
                 corners2 = self.GetCorners(image2_resized)
 
             final_frame = []
+            print((current_time1 - prev_time))
             # Check if enough time has passed to use the frame
             if (current_time1 - prev_time) >= interval:
-
+                print("resizing image")
                 # Resize the images to the same height
                 
                 image1_resized = cv2.resize(frame1, (width, height))
@@ -173,22 +179,20 @@ class Inference(threading.Thread):
                 # Combine the two images side-by-side
                 frame = cv2.vconcat([image1_resized, image2_resized])
 
-
+                print("making inference")
                 ids_frame = self.GetInference(frame)
+                print("inference made")
                 
-                if(ids_frame != []):
+                if(ids_frame != [] and ids_frame != None):
                     for frame in ids_frame:
-                        
-
                         if frame["point"][1] < height: #to be confirmed
-                            coord = self.GetConvertedCoor(corners2,frame["point"])
+                            coord = self.GetConvertedCoor(corners1,frame["point"])
                             x, y = coord[0, 0]
                             print([x,y])
                             final_frame.append({"point":[x,y],"id":frame["id"],"frame_num":frame_counter})
                         else:
-                            continue
                             frame_cor = (frame["point"][0],frame["point"][1]-height)
-                            coord = self.GetConvertedCoor(corners1,frame_cor)
+                            coord = self.GetConvertedCoor(corners2,frame_cor)
                             x, y = coord[0, 0]
                             print([x,y])
                             final_frame.append({"point":[x,y],"id":frame["id"],"frame_num":frame_counter}) 
@@ -314,14 +318,27 @@ class Consumer(threading.Thread):
         plt.show()
         """
 
-    
+class VideoStream:
+    def __init__(self, url):
+        self.url = url
+        self.cap = cv2.VideoCapture(self.url)
+
+    def read(self):
+        return self.cap.read()
+
+    def release(self):
+        self.cap.release()
+
+#video stream
+vs1 = VideoStream('https://192.168.1.5:8080/video')
+vs2 = VideoStream('https://192.168.1.7:8080/video')
 
 #create the lock
 lock = threading.Lock()
 data = Data(lock)
 
 #create the producer
-my_thread = Inference('guga1.mp4', 'guga2.mp4', data)
+my_thread = Inference('guga1.mp4', 'guga2_flip.mp4', data,vs1,vs2,isStream=True)
 my_thread.start()
 
 #create the consumer
@@ -332,7 +349,7 @@ while True:
     #try:
     print("trying to get heatmap")
     my_consumer.GetHeatmap()
-    time.sleep(2)  # wait for 2 seconds before running the function again
+    time.sleep(20)  # wait for 2 seconds before running the function again
     #except:
     #    print('passouuuuuu')
     #    pass
