@@ -7,6 +7,7 @@ import threading
 import pickle
 import json
 from old_pipeline.tracker import Tracker
+from player import Player
 
 class Inference(threading.Thread):
     def __init__(self, path1, path2,data):
@@ -36,44 +37,44 @@ class Inference(threading.Thread):
                     cy = int((y + y + h) / 2)
                     by = int(y + h)
 
-                    center_points_cur_frame.append((cx, cy))
                     #print("FRAME N°", count, " ", x, y, w, h)
 
                     x1 = int(x)
                     x2 = int(x+w)
                     y1 = int(y)
                     y2 = int(y+h)
-
+                    
                     # cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
                     # cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
                     detections.append([x1, y1, x2, y2, score])
-            
-            self.tracker.update(frame_rec, detections)
+
+            if len(detections) != 0:
+                self.tracker.update(frame_rec, detections)
+                    
+                ids = []
+                for track in self.tracker.tracks:
+                    bbox = track.bbox
+                    x1, y1, x2, y2 = bbox
+                    track_id = track.track_id
+
+                    cx = int((x1 + x2)/2)
+                    by = int(y2)
+
+                    ids.append({"point":(cx,by),"id":track_id})
+
+                    #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+
+                    #cv2.circle(frame_rec, (cx,cy), 5, (0, 0, 255), -1)
+                    #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
                 
-            ids = []
-            for track in self.tracker.tracks:
-                bbox = track.bbox
-                x1, y1, x2, y2 = bbox
-                track_id = track.track_id
-
-                cx = int((x1 + x2)/2)
-                cy = int((y1 + y2)/2)
-
-                ids.append({"point":(cx,cy),"id":track_id})
-
-                #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-
-                #cv2.circle(frame_rec, (cx,cy), 5, (0, 0, 255), -1)
-                #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
-            
-            #cv2.imshow("Frame", frame_rec)
-            return ids
+                #cv2.imshow("Frame", frame_rec)
+                return ids
     
     def GetCorners(self,img):
         height, width, _ = img.shape
         # Resize the image to half its original size
-        img = cv2.resize(img, (int(width/2), int(height/2)))
+        #img = cv2.resize(img, (int(width/2), int(height/2)))
         # Create a window to display the image
         cv2.namedWindow('image')
 
@@ -123,7 +124,7 @@ class Inference(threading.Thread):
         
         return transformed_point
 
-    def run(self):
+    def run(self) -> None:
         # Set up video capture
         #capture = cv2.VideoCapture("http://192.168.1.67:8080/video")
         capture1 = cv2.VideoCapture(self.path1)
@@ -137,7 +138,7 @@ class Inference(threading.Thread):
         corners1 = []
         corners2 = []
 
-
+        frame_counter = 0
         while True:
             # Read frame from video stream
             ret1, frame1 = capture1.read()
@@ -147,23 +148,26 @@ class Inference(threading.Thread):
 
             # Check if frame was successfully read
             if not ret1 or not ret2:
-                break
+                continue #if there is a missing frame
 
             current_time1 = capture1.get(cv2.CAP_PROP_POS_MSEC)
-            current_time2 = capture2.get(cv2.CAP_PROP_POS_MSEC)
 
+            height = 720
+            width = 1280
+            
             #ask for the four points
             if(current_time1==0):
-                corners1 = self.GetCorners(frame1)
-                corners2 = self.GetCorners(frame2)
+                image1_resized = cv2.resize(frame1, (width, height))
+                image2_resized = cv2.resize(frame2, (width, height))
+                corners1 = self.GetCorners(image1_resized)
+                corners2 = self.GetCorners(image2_resized)
 
             final_frame = []
             # Check if enough time has passed to use the frame
             if (current_time1 - prev_time) >= interval:
 
                 # Resize the images to the same height
-                height = 720
-                width = 1280
+                
                 image1_resized = cv2.resize(frame1, (width, height))
                 image2_resized = cv2.resize(frame2, (width, height))
                 # Combine the two images side-by-side
@@ -174,25 +178,28 @@ class Inference(threading.Thread):
                 
                 if(ids_frame != []):
                     for frame in ids_frame:
-                        print(frame["point"])
-                        img = cv2.imread("futsal.png")
-                        if frame["point"][1] > height: #to be confirmed
-                            frame_cor = (frame["point"][0],frame["point"][1])
+                        
+
+                        if frame["point"][1] < height: #to be confirmed
                             coord = self.GetConvertedCoor(corners2,frame["point"])
-                            final_frame.append({"point":coord,"id":frame["id"]})
+                            x, y = coord[0, 0]
+                            print([x,y])
+                            final_frame.append({"point":[x,y],"id":frame["id"],"frame_num":frame_counter})
                         else:
+                            continue
                             frame_cor = (frame["point"][0],frame["point"][1]-height)
                             coord = self.GetConvertedCoor(corners1,frame_cor)
-                            final_frame.append({"point":coord,"id":frame["id"]}) 
+                            x, y = coord[0, 0]
+                            print([x,y])
+                            final_frame.append({"point":[x,y],"id":frame["id"],"frame_num":frame_counter}) 
 
-                    print(final_frame)
+                    #print(final_frame)
                     self.data.append_to_frame(final_frame)
 
                 # Update previous time
                 prev_time = current_time1
 
-
-
+            frame_counter += 1
             # Check for 'q' key to quit
             if cv2.waitKey(1) == ord('q'):
                 break
@@ -208,33 +215,124 @@ class Data:
         self.final_frame = []
         self.lock = lock
 
-    def append_to_frame(self, data):
+    def append_to_frame(self, data) -> None:
         # Acquire the lock
         self.lock.acquire()
 
         try:
             # Modify the array
-            self.final_frame.append(data)
-            print(self.final_frame)
+            self.final_frame += (data)
+            print("writing value")
         finally:
             # Release the lock
             self.lock.release()
 
-    def read_frame(self):
+    def read_frame(self) -> None:
         # Acquire the lock
         self.lock.acquire()
 
         try:
             # Return a copy of the array
-            return self.final_frame.copy()
+            print("returning value")
+            return self.final_frame
         finally:
             # Release the lock
             self.lock.release()
 
+class Consumer(threading.Thread):
+    def __init__(self, data):
+        threading.Thread.__init__(self)
+        self.data = data
+        self.players:dict[Player] = dict()
+        self.last_worked_frame:int = 0
+
+    def update_players(self):
+        player_ids = self.players.keys() 
+        player_ids = [id for id in player_ids]
+
+        fresh_data = [d for d in self.data.read_frame() if d['frame_num'] > 10]
+        
+        for data in fresh_data:
+            coords = data['point']
+            player_id = str(data['id'])
+
+            if player_id not in player_ids:
+                self.players[player_id] = Player(player_id)
+            
+            self.players[player_id].update_coord_buffer(coords)
+            self.players[player_id].update_tot_distance()
+             
+        return      
+        
+
+
+    def GetHeatmap(self) -> None:
+
+        temp = self.data.read_frame()
+        print(type(temp))
+        if len(temp)>0:print(temp[0])
+        points_array_x = [item['point'][0] for item in temp]
+        points_array_y = [item['point'][1] for item in temp]
+        plt.scatter(points_array_x, points_array_y)
+        plt.xlim([0, 1000])
+        plt.ylim([0, 800])
+        # Set the title and labels for the plot
+        plt.title('Scatter Plot of Data')
+        plt.xlabel('X Position')
+        plt.ylabel('Y Position')
+
+        plt.show()
+
+        """
+        # Load the background image
+        bg = plt.imread('futsal.png')
+        height, width, channels = bg.shape
+
+        # Define the range of the x and y coordinates
+        xmin, xmax =  (0,width)
+        ymin, ymax =  (0,height)
+
+        print("width: " + str(width) + " height: " + str(height))
+
+        # Create a figure with the same aspect ratio as the background image
+        fig, ax = plt.subplots(figsize=(bg.shape[1]/100,bg.shape[0]/100))
+
+        # Plot the background image
+        ax.imshow(bg)
+
+        # Convert the coordinates to a heatmap using the histogram2d function
+        heatmap, xedges, yedges = np.histogram2d(points_array_x, points_array_y, bins=50, range=[[xmin, xmax], [ymin, ymax]])
+
+        # Plot the heatmap using imshow function
+        ax.imshow(heatmap.T, extent=[xmin, xmax, ymin, ymax], cmap='viridis', alpha=0.5)
+
+        # Set the x and y axis limits
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+
+        # Show the plot
+        plt.show()
+        """
+
+    
+
+#create the lock
 lock = threading.Lock()
 data = Data(lock)
 
-
-#np.save("points", final_frame)
+#create the producer
 my_thread = Inference('guga1.mp4', 'guga2.mp4', data)
 my_thread.start()
+
+#create the consumer
+my_consumer = Consumer(data)
+my_consumer.start()
+
+while True:
+    #try:
+    print("trying to get heatmap")
+    my_consumer.GetHeatmap()
+    time.sleep(2)  # wait for 2 seconds before running the function again
+    #except:
+    #    print('passouuuuuu')
+    #    pass
