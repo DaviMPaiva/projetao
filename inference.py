@@ -65,15 +65,15 @@ class Inference(threading.Thread):
 
                     ids.append({"point":(cx,by),"id":track_id})
 
-                    cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                    cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
+                    #cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
                     #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
                 
-                cv2.imshow("Frame", frame_rec)
+                #cv2.imshow("Frame", frame_rec)
                 return ids
             else:
-                cv2.imshow("Frame", frame_rec)
+                #cv2.imshow("Frame", frame_rec)
                 return []
     
     def GetCorners(self,img):
