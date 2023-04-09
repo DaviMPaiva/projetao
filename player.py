@@ -1,5 +1,6 @@
 import csv
-import numpy as np
+import math
+import os
 
 class Player:
 
@@ -16,6 +17,8 @@ class Player:
         self.coords_path = f'data/coords_player_{id}.csv'
         self.coords_buffer = []
         self.tot_distance = 0
+        if not os.path.exists('data'):
+            os.mkdir('data')
 
         with open(self.coords_path, 'w', newline='') as f:
             writer = csv.writer(f)
@@ -35,10 +38,32 @@ class Player:
                 writer.writerow(coords)
         f.close()
 
-    def update_tot_distance(self):
+    def update_tot_distance(self, field_width, field_height, 
+                            screen_width, screen_height) -> None:
+        
         try:
-            dx = np.array(self.curr_position) - np.array(self.last_position)
-            dx = np.linalg.norm(dx)
-            self.tot_distance += dx
+            dx_px = self.curr_position[0] - self.last_position[0]
+            dy_px = self.last_position[1] - self.last_position[1]
+
+            dx_r = dx_px * (field_width/screen_width)
+            dy_r = dy_px * (field_height/screen_height)
+            
+            self.tot_distance += math.sqrt(dx_r**2 + dy_r**2)
+            #print(self.tot_distance)
+        except:
+            pass
+    
+    def instant_speed(self, field_width, field_height, 
+                            screen_width, screen_height, frame_time) -> None:
+        try:
+            dx_px = self.curr_position[0] - self.last_position[0]
+            dy_px = self.last_position[1] - self.last_position[1]
+
+            dx_r = dx_px * (field_width/screen_width)
+            dy_r = dy_px * (field_height/screen_height)
+            distance = math.sqrt(dx_r**2 + dy_r**2) 
+
+            insta_speed = 3.6 * distance/frame_time
+            print(insta_speed, 'km/h')
         except:
             pass

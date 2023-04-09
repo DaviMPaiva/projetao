@@ -1,0 +1,15 @@
+<svg width="1072" height="623" viewBox="0 0 1072 623" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1072" height="623" fill="#2F2F2F"/>
+<line x1="536" y1="623" x2="536" y2="-1.31134e-07" stroke="#666666" stroke-width="6"/>
+<circle cx="536.5" cy="311.5" r="93.5" stroke="#666666" stroke-width="4"/>
+<circle cx="8.5" cy="8.5" r="8.5" transform="matrix(1 0 0 -1 528 320)" fill="#666666"/>
+<rect x="25" y="22" width="1026" height="578" stroke="#666666" stroke-width="6"/>
+<path d="M172 383C211.488 383 243.5 350.988 243.5 311.5C243.5 272.012 211.488 240 172 240" stroke="#666666" stroke-width="6"/>
+<circle cx="8.5" cy="8.5" r="8.5" transform="matrix(1 0 0 -1 116 320)" fill="#666666"/>
+<rect x="25" y="119" width="144" height="384" stroke="#666666" stroke-width="6"/>
+<rect x="25" y="223" width="55" height="176" stroke="#666666" stroke-width="6"/>
+<path d="M903.5 239C864.012 239 832 271.012 832 310.5C832 349.988 864.012 382 903.5 382" stroke="#666666" stroke-width="6"/>
+<circle cx="8.5" cy="8.5" r="8.5" transform="matrix(-1 -8.74228e-08 -8.74228e-08 1 959.5 302)" fill="#666666"/>
+<rect x="1050.5" y="503" width="144" height="384" transform="rotate(-180 1050.5 503)" stroke="#666666" stroke-width="6"/>
+<rect x="1050.5" y="399" width="55" height="176" transform="rotate(-180 1050.5 399)" stroke="#666666" stroke-width="6"/>
+</svg>

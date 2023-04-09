@@ -33,7 +33,7 @@
   
           <div class="grid grid-flow-row pt-5 p-4 border-t border-zinc-800 justify-items-start">
             <div class="text-zinc-500">
-              <h1>aceleração média do atleta</h1>
+              <h1>Aceleração média do atleta</h1>
             </div>
             <div class="grid grid-cols-2 gap-2 justify-items-start">
               <div><h1 class="text-7xl text-white mt-3">X</h1></div>
@@ -43,17 +43,17 @@
   
           <div class="grid grid-flow-row pt-5 p-4  border-t border-zinc-800 justify-items-start">
             <div class="text-zinc-500">
-              <h1>variação da aceleração do atelta</h1>
+              <h1>Distância percorrida</h1>
             </div>
             <div class="grid grid-cols-2 gap-2 justify-items-start">
               <div><h1 class="text-7xl text-white mt-3">X</h1></div>
-              <h1 class="mt-2 text-3xl text-zinc-600">m/s</h1>
+              <h1 class="mt-2 text-3xl text-zinc-600">m</h1>
             </div>
           </div>
   
           <div class="grid grid-flow-row pt-5 p-4  border-t border-zinc-800 justify-items-start">
             <div class="text-zinc-500">
-              <h1>velocidade média do atelta</h1>
+              <h1>Velocidade do atleta</h1>
             </div>
             <div class="grid grid-cols-2 gap-2 justify-items-start">
               <div><h1 class="text-7xl text-white mt-3">X</h1></div>
@@ -63,7 +63,7 @@
   
           <div class="grid grid-flow-row pt-5 p-4 gap-5  border-t border-zinc-800 justify-items-start">
             <div class="text-zinc-500">
-              <h1>tempo de jogo</h1>
+              <h1>Tempo de jogo</h1>
             </div>
             <div class="grid grid-cols-2 justify-items-start">
               <div><h1 class="text-1xl text-white"><strong>25</strong> <span class="text-zinc-500">minutos</span></h1></div>
@@ -79,9 +79,9 @@
         </div>
       </div>
     </div>
-  </template>
+</template>
   
-  <style>
+<style>
   
   .heatmap {
     background-image: url('../assets/Group-3.svg');
@@ -91,11 +91,10 @@
    
   }
   
-  </style>
+</style>
   
-  <script>
+<script>
   import heatmap from 'heatmap.js'
-  
   
   
   export default {
@@ -141,7 +140,7 @@
       })
     }
   }
-  </script>
+</script>
   
   
   

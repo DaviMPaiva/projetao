@@ -35,9 +35,6 @@ class Inference(threading.Thread):
                 if self.od.classes[class_id] == 'person':    
                     #print('class id = ', od.classes[class_id])
                     (x, y, w, h) = box
-                    cx = int((x + x + w) / 2)
-                    cy = int((y + y + h) / 2)
-                    by = int(y + h)
 
                     #print("FRAME N°", count, " ", x, y, w, h)
 
@@ -65,12 +62,13 @@ class Inference(threading.Thread):
 
                     ids.append({"point":(cx,by),"id":track_id})
 
-                    #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
                     #cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
                     #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
+                    
                 
-                #cv2.imshow("Frame", frame_rec)
+                cv2.imshow("Frame", frame_rec)
                 return ids
             else:
                 #cv2.imshow("Frame", frame_rec)
@@ -129,10 +127,19 @@ class Inference(threading.Thread):
         
         return transformed_point
 
+    def GetImgCorners(self):
+        return self.frame_corner1, self.frame_corner2
+
     def run(self) -> None:
         # Set up video capture
         capture1 = cv2.VideoCapture(self.path1)
+        frame_rate_1 = capture1.get(cv2.CAP_PROP_FPS)
+
         capture2 = cv2.VideoCapture(self.path2)
+        frame_rate_2 = capture2.get(cv2.CAP_PROP_FPS)
+
+        print('FRAME RATE 1 : ', frame_rate_1)
+        print('FRAME RATE 2', frame_rate_2)
         # Set up variables for timing
         prev_time = 0
         interval = 1
@@ -143,6 +150,11 @@ class Inference(threading.Thread):
 
         frame_counter = 0
         while True:
+
+            if frame_counter % 3 != 0:
+                frame_counter += 1
+                continue
+
             # Read frame from video stream
             if self.isStream:
                 ret1, frame1 = self.vs1.read()#capture1.read()
@@ -166,9 +178,10 @@ class Inference(threading.Thread):
                 image2_resized = cv2.resize(frame2, (width, height))
                 corners1 = self.GetCorners(image1_resized)
                 corners2 = self.GetCorners(image2_resized)
+                #self.frame_corner1 = image1_resized
+                #self.frame_corner2 = image2_resized
 
             final_frame = []
-            print((current_time1 - prev_time))
             # Check if enough time has passed to use the frame
             if (current_time1 - prev_time) >= interval:
                 print("resizing image")
@@ -203,6 +216,7 @@ class Inference(threading.Thread):
                 # Update previous time
                 prev_time = current_time1
 
+            
             frame_counter += 1
             # Check for 'q' key to quit
             if cv2.waitKey(1) == ord('q'):
@@ -226,7 +240,7 @@ class Data:
         try:
             # Modify the array
             self.final_frame += (data)
-            print("writing value")
+            #print("writing value")
         finally:
             # Release the lock
             self.lock.release()
@@ -250,25 +264,32 @@ class Consumer(threading.Thread):
         self.players:dict[Player] = dict()
         self.last_worked_frame:int = 0
 
+
     def update_players(self):
+        print('updating players')
         player_ids = self.players.keys() 
         player_ids = [id for id in player_ids]
 
-        fresh_data = [d for d in self.data.read_frame() if d['frame_num'] > 10]
-        
+        fresh_data = [d for d in self.data.read_frame() if d['frame_num'] > self.last_worked_frame]
+        print(fresh_data)
         for data in fresh_data:
             coords = data['point']
             player_id = str(data['id'])
-
+            #print(player_id)
             if player_id not in player_ids:
                 self.players[player_id] = Player(player_id)
             
-            self.players[player_id].update_coord_buffer(coords)
-            self.players[player_id].update_tot_distance()
-             
-        return      
-        
+            self.players[player_id].update_coords_buffer(coords)
+            self.players[player_id].update_tot_distance(field_width=8, field_height=7, screen_width=1280, screen_height=720)    
+            self.players[player_id].instant_speed(field_width=8, field_height=7, screen_width=1280, screen_height=720, frame_time = 1)
+        try:
+            self.last_worked_frame = fresh_data[-1]['frame_num']
+        except:
+            pass
+        #print(self.last_worked_frame)
 
+    def test(self):
+        return self.data.read_frame()
 
     def GetHeatmap(self) -> None:
 
@@ -329,7 +350,8 @@ class VideoStream:
     def release(self):
         self.cap.release()
 
-#video stream
+
+'''#video stream
 vs1 = VideoStream('https://192.168.1.5:8080/video')
 vs2 = VideoStream('https://192.168.1.7:8080/video')
 
@@ -338,7 +360,7 @@ lock = threading.Lock()
 data = Data(lock)
 
 #create the producer
-my_thread = Inference('guga1.mp4', 'guga2_flip.mp4', data,vs1,vs2,isStream=True)
+my_thread = Inference('videos/guga1.mp4', 'videos/guga2_flip.mp4', data,vs1,vs2,isStream=False)
 my_thread.start()
 
 #create the consumer
@@ -348,8 +370,9 @@ my_consumer.start()
 while True:
     #try:
     print("trying to get heatmap")
-    my_consumer.GetHeatmap()
+    my_consumer.update_players()
     time.sleep(20)  # wait for 2 seconds before running the function again
     #except:
     #    print('passouuuuuu')
     #    pass
+'''

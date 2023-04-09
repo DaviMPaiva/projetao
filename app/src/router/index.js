@@ -1,11 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
+import InputCamView from '../views/InputCamView.vue'
 
 const routes = [
   {
     path: '/',
     name: 'home',
     component: DashboardView
+  },
+  {
+    path: '/input-camera',
+    name: 'inputCamera',
+    component: InputCamView
   },
   {
     path: '/about',
