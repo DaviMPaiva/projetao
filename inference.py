@@ -259,11 +259,13 @@ class Data:
             self.lock.release()
 
 class Consumer(threading.Thread):
-    def __init__(self, data):
+    def __init__(self, data,field_width,field_height):
         threading.Thread.__init__(self)
         self.data = data
         self.players:dict[Player] = dict()
         self.last_worked_frame:int = 0
+        self.field_width = field_width #in cm please
+        self.field_height = field_height
 
 
     def update_players(self):
@@ -293,6 +295,9 @@ class Consumer(threading.Thread):
         return self.data.read_frame()
     
     def GetIdPos(self,id):
+        """
+        returns a array of all that is probably the same person 
+        """
         ids = self.data.read_frame()
         id_dicts = [d for d in ids if d["id"] == id]
         if len(id_dicts) > 0:
@@ -317,7 +322,31 @@ class Consumer(threading.Thread):
         return distance
     
     def GetRealDistance(self,x1,y1,x2,y2):#give two points, returns the real distance betwen then
-        return x1
+        """
+        return the real distance between two screen points
+        """
+        a = (self.field_width*(x1-x2))/1000
+        b = (self.field_height*(y1-y2))/1000
+        return math.sqrt((a) ** 2 + (b) ** 2)
+    
+    def GetSpeed(self,id,interval=10):
+        ids = self.GetIdPos(id)
+        if len(ids) > interval:
+            tail = ids[-1]
+            p1 = ids[-interval]
+            elapsed_time_s = (tail["time"] - p1["time"]) / 100
+            elapsed_distance_m = self.GetRealDistance(tail["point"][0],tail["point"][1],p1["point"][0],p1["point"][1]) / 100
+            return elapsed_distance_m/elapsed_time_s
+        return -1
+    
+    def GetDistanceTraveled_cm(self,id):
+        ids = self.GetIdPos(id)
+        distanceTraveled = 0
+        if len(ids) > 1:
+            for i in range(0,len(ids)-2):
+                distanceTraveled += self.GetRealDistance(ids[i]["point"][0],ids[i]["point"][1],ids[i+1]["point"][0],ids[i+1]["point"][1])
+        return distanceTraveled
+
     
     def GetHeatmap(self,ids) -> None:
         colors = ['red', 'blue', 'green', 'orange', 'purple']
@@ -328,7 +357,11 @@ class Consumer(threading.Thread):
             if len(id1)>0:print("empty id 1")
             points_array_x = [item['point'][0] for item in id1]
             points_array_y = [item['point'][1] for item in id1]
+            distance = self.GetDistanceTraveled_cm(id)/100
+            speed = self.GetSpeed(id)
             plt.scatter(points_array_x, points_array_y,color=colors[i%4])
+            plt.text(0.02, 0.95-i*0.1, f"Distance traveled by id {id}: {distance:.2f} m", transform=plt.gca().transAxes)
+            plt.text(0.02, 0.90-i*0.1, f"Speed of id {id}: {speed:.2f} m/s", transform=plt.gca().transAxes)
         plt.xlim([0, 1000])
         plt.ylim([0, 1600])
         # Set the title and labels for the plot
@@ -381,7 +414,7 @@ class VideoStream:
     def release(self):
         self.cap.release()
 
-
+"""
 #video stream
 vs1 = VideoStream('')
 vs2 = VideoStream('')
@@ -395,7 +428,7 @@ my_thread = Inference('guga2 (online-video-cutter.com).mp4', 'guga2 (online-vide
 my_thread.start()
 
 #create the consumer
-my_consumer = Consumer(data)
+my_consumer = Consumer(data,798,680)
 my_consumer.start()
 
 while True:
@@ -406,4 +439,4 @@ while True:
     #except:
     #    print('passouuuuuu')
     #    pass
-
+"""
