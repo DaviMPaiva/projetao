@@ -8,6 +8,7 @@ import pickle
 import json
 from old_pipeline.tracker import Tracker
 from player import Player
+import math
 
 class Inference(threading.Thread):
     def __init__(self, path1, path2,data,vs1,vs2,isStream):
@@ -68,7 +69,7 @@ class Inference(threading.Thread):
                     #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
                     
                 
-                cv2.imshow("Frame", frame_rec)
+                #cv2.imshow("Frame", frame_rec)
                 return ids
             else:
                 #cv2.imshow("Frame", frame_rec)
@@ -201,15 +202,15 @@ class Inference(threading.Thread):
                         if frame["point"][1] < height: #to be confirmed
                             coord = self.GetConvertedCoor(corners1,frame["point"])
                             x, y = coord[0, 0]
-                            print([x,y])
-                            final_frame.append({"point":[x,y],"id":frame["id"],"frame_num":frame_counter})
+                            print([(x),(800-y)+800])
+                            final_frame.append({"point":[(x),(800-y)+800],"id":frame["id"],"frame_num":frame_counter,"time":current_time1,"is_upper_video":True})
                         else:
                             frame_cor = (frame["point"][0],frame["point"][1]-height)
                             coord = self.GetConvertedCoor(corners2,frame_cor)
                             x, y = coord[0, 0]
-                            print([x,y])
-                            final_frame.append({"point":[x,y],"id":frame["id"],"frame_num":frame_counter}) 
-
+                            print([(1000-x),y])
+                            final_frame.append({"point":[(1000-x),y],"id":frame["id"],"frame_num":frame_counter,"time":current_time1,"is_upper_video":False}) 
+                                
                     #print(final_frame)
                     self.data.append_to_frame(final_frame)
 
@@ -290,17 +291,46 @@ class Consumer(threading.Thread):
 
     def test(self):
         return self.data.read_frame()
+    
+    def GetIdPos(self,id):
+        ids = self.data.read_frame()
+        id_dicts = [d for d in ids if d["id"] == id]
+        if len(id_dicts) > 0:
+            #get the lasst value
+            tail = id_dicts[-1]
+            #get all future frames
+            future_ids = [d for d in ids if d["frame_num"] > tail["frame_num"]]
+            #loop all of then
+            for future in future_ids:
+                #get distance between those two points
+                dist = self.GetDistance(future["point"][0],future["point"][1],tail["point"][0],tail["point"][1])
+                #if some future frame is very close and not too long after
+                if (dist < 20) and (future["frame_num"] < (tail["frame_num"]+10)):
+                    #we concatenate them and all values 
+                    id_dicts += self.GetIdPos(future["id"])
+                    break
 
-    def GetHeatmap(self) -> None:
-
-        temp = self.data.read_frame()
-        print(type(temp))
-        if len(temp)>0:print(temp[0])
-        points_array_x = [item['point'][0] for item in temp]
-        points_array_y = [item['point'][1] for item in temp]
-        plt.scatter(points_array_x, points_array_y)
+        return id_dicts
+    
+    def GetDistance(self,x1,y1,x2,y2):
+        distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        return distance
+    
+    def GetRealDistance(self,x1,y1,x2,y2):#give two points, returns the real distance betwen then
+        return x1
+    
+    def GetHeatmap(self,ids) -> None:
+        colors = ['red', 'blue', 'green', 'orange', 'purple']
+        for i,id in enumerate(ids):
+            id1 = self.GetIdPos(id)
+            print("with id: " + str(id1))
+            print(id1)
+            if len(id1)>0:print("empty id 1")
+            points_array_x = [item['point'][0] for item in id1]
+            points_array_y = [item['point'][1] for item in id1]
+            plt.scatter(points_array_x, points_array_y,color=colors[i%4])
         plt.xlim([0, 1000])
-        plt.ylim([0, 800])
+        plt.ylim([0, 1600])
         # Set the title and labels for the plot
         plt.title('Scatter Plot of Data')
         plt.xlabel('X Position')
@@ -342,7 +372,8 @@ class Consumer(threading.Thread):
 class VideoStream:
     def __init__(self, url):
         self.url = url
-        self.cap = cv2.VideoCapture(self.url)
+        if url != '':
+            self.cap = cv2.VideoCapture(self.url)
 
     def read(self):
         return self.cap.read()
@@ -351,16 +382,16 @@ class VideoStream:
         self.cap.release()
 
 
-'''#video stream
-vs1 = VideoStream('https://192.168.1.5:8080/video')
-vs2 = VideoStream('https://192.168.1.7:8080/video')
+#video stream
+vs1 = VideoStream('')
+vs2 = VideoStream('')
 
 #create the lock
 lock = threading.Lock()
 data = Data(lock)
 
 #create the producer
-my_thread = Inference('videos/guga1.mp4', 'videos/guga2_flip.mp4', data,vs1,vs2,isStream=False)
+my_thread = Inference('guga2 (online-video-cutter.com).mp4', 'guga2 (online-video-cutter.com).mp4', data,vs1,vs2,isStream=False)
 my_thread.start()
 
 #create the consumer
@@ -369,10 +400,10 @@ my_consumer.start()
 
 while True:
     #try:
+    time.sleep(15)  # wait for 2 seconds before running the function again
     print("trying to get heatmap")
-    my_consumer.update_players()
-    time.sleep(20)  # wait for 2 seconds before running the function again
+    my_consumer.GetHeatmap([1,2])
     #except:
     #    print('passouuuuuu')
     #    pass
-'''
+
