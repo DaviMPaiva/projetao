@@ -326,7 +326,7 @@ class Consumer(threading.Thread):
         return the real distance between two screen points
         """
         a = (self.field_width*(x1-x2))/1000
-        b = (self.field_height*(y1-y2))/1000
+        b = (self.field_height*(y1-y2))/1600
         return math.sqrt((a) ** 2 + (b) ** 2)
     
     def GetSpeed(self,id,interval=10):
