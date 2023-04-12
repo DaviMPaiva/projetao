@@ -3,7 +3,7 @@ from inference import Inference,Data,Consumer,VideoStream
 from flask_cors import CORS
 import threading
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:8081"}})
+CORS(app, resources={r"/*": {"origins": "http://localhost:8080"}})
 
 # global variables
 DATA = ''
@@ -15,7 +15,7 @@ HEATMAP_BUFFER:list = ['img1.png', 'img2.png']
 lock = threading.Lock()
 cord = Data(lock)
 #create the consumer
-my_consumer = Consumer(cord)
+my_consumer = Consumer(cord,798,680)
 my_consumer.start()
 
 
@@ -92,9 +92,33 @@ def heatmap():
         else:
             'No Heatmaps found', 404 
 
-@app.route("/speed")
+@app.route("/distance", methods=['GET'])
+def distance():
+    if request.method == 'GET':
+        d_player = my_consumer.GetDistanceTraveled_m(1)
+        d_opponent = my_consumer.GetDistanceTraveled_m(2)
+
+        payload = {
+            'd_player':d_player,
+            'd_opponent':d_opponent
+        }
+
+        return jsonify(payload)
+
+
+@app.route("/speed", methods=['GET'])
 def speed():
-    pass
+    if request.method == 'GET':
+        d_player = my_consumer.GetSpeed(1)
+        d_opponent = my_consumer.GetSpeed(2)
+
+        payload = {
+            'd_player':d_player,
+            'd_opponent':d_opponent
+        }
+
+        return jsonify(payload)
+    
 
 @app.route("/acceleration")
 def acceleration():

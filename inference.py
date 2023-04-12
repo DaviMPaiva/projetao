@@ -65,14 +65,14 @@ class Inference(threading.Thread):
 
                     cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                    #cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
-                    #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
+                    cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
+                    cv2.putText(frame_rec, str(track_id), (cx, by - 7), 0, 1, (0, 0, 255), 2)
                     
                 
-                #cv2.imshow("Frame", frame_rec)
+                cv2.imshow("Frame", frame_rec)
                 return ids
             else:
-                #cv2.imshow("Frame", frame_rec)
+                cv2.imshow("Frame", frame_rec)
                 return []
     
     def GetCorners(self,img):
@@ -143,7 +143,7 @@ class Inference(threading.Thread):
         print('FRAME RATE 2', frame_rate_2)
         # Set up variables for timing
         prev_time = 0
-        interval = 1
+        interval = 0
 
         ids_frames = []
         corners1 = []
@@ -152,9 +152,9 @@ class Inference(threading.Thread):
         frame_counter = 0
         while True:
 
-            if frame_counter % 3 != 0:
+            '''if frame_counter % 3 != 0:
                 frame_counter += 1
-                continue
+                continue'''
 
             # Read frame from video stream
             if self.isStream:
@@ -184,7 +184,7 @@ class Inference(threading.Thread):
 
             final_frame = []
             # Check if enough time has passed to use the frame
-            if (current_time1 - prev_time) >= interval:
+            if (frame_counter - prev_time) >= interval:
                 print("resizing image")
                 # Resize the images to the same height
                 
@@ -211,11 +211,13 @@ class Inference(threading.Thread):
                             print([(1000-x),y])
                             final_frame.append({"point":[(1000-x),y],"id":frame["id"],"frame_num":frame_counter,"time":current_time1,"is_upper_video":False}) 
                                 
+                        print("id: " + str(frame["id"]))
+                        print("frame counter: " + str(frame_counter))
                     #print(final_frame)
                     self.data.append_to_frame(final_frame)
 
                 # Update previous time
-                prev_time = current_time1
+                prev_time = frame_counter
 
             
             frame_counter += 1
@@ -336,17 +338,25 @@ class Consumer(threading.Thread):
             p1 = ids[-interval]
             elapsed_time_s = (tail["time"] - p1["time"]) / 100
             elapsed_distance_m = self.GetRealDistance(tail["point"][0],tail["point"][1],p1["point"][0],p1["point"][1]) / 100
-            return elapsed_distance_m/elapsed_time_s
+            return elapsed_distance_m/elapsed_time_s #km/h na vdd, mas n sei pq 
         return -1
     
-    def GetDistanceTraveled_cm(self,id):
+    def GetDistanceTraveled_m(self,id):
         ids = self.GetIdPos(id)
         distanceTraveled = 0
         if len(ids) > 1:
             for i in range(0,len(ids)-2):
                 distanceTraveled += self.GetRealDistance(ids[i]["point"][0],ids[i]["point"][1],ids[i+1]["point"][0],ids[i+1]["point"][1])
-        return distanceTraveled
+        return distanceTraveled/100
 
+    def GetAvgSpeed(self,id):
+        ids = self.GetIdPos(id)
+        elapsed_time_s = 0
+        elapsed_distance_m = 0
+        for i in range(0,len(ids)-2): 
+            elapsed_time_s += (ids[i]["time"] - ids[i][(i+1)]["time"]) / 100
+            elapsed_distance_m =+ self.GetRealDistance(ids[i]["point"][0],ids[i]["point"][1],ids[i][(i+1)]["point"][0],ids[i][(i+1)]["point"][1]) / 100
+        return elapsed_time_s/elapsed_distance_m
     
     def GetHeatmap(self,ids) -> None:
         colors = ['red', 'blue', 'green', 'orange', 'purple']
