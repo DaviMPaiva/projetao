@@ -260,6 +260,10 @@ class Data:
             # Release the lock
             self.lock.release()
 
+    def save_data(self):
+        with open("data.pickle", "wb") as f:
+            pickle.dump(self.final_frame, f)
+
 class Consumer(threading.Thread):
     def __init__(self, data,field_width,field_height):
         threading.Thread.__init__(self)
@@ -358,6 +362,14 @@ class Consumer(threading.Thread):
             elapsed_distance_m =+ self.GetRealDistance(ids[i]["point"][0],ids[i]["point"][1],ids[i][(i+1)]["point"][0],ids[i][(i+1)]["point"][1]) / 100
         return elapsed_time_s/elapsed_distance_m
     
+    def GetIndividualHeatmap(self,id):
+        id1 = self.GetIdPos(id)
+        print("with id: " + str(id1))
+        print(id1)
+        if len(id1)>0:print("empty id 1")
+        points_array = [item['point'] for item in id1]
+        return points_array
+
     def GetHeatmap(self,ids) -> None:
         colors = ['red', 'blue', 'green', 'orange', 'purple']
         for i,id in enumerate(ids):
