@@ -3,7 +3,7 @@
   
       <!--Heatmap-->
       <div ref="heatmapContainer" class="heatmap col-span-8 h-screen bg-zinc-800 justify-items-center">
-        <div ref="heatmapContainer"></div>
+        
       </div>
   
       <!--Painel de controle-->
@@ -46,7 +46,7 @@
               <h1>Distância percorrida</h1>
             </div>
             <div class="grid grid-cols-2 gap-2 justify-items-start">
-              <div><h1 class="text-7xl text-white mt-3">X</h1></div>
+              <div><h1 class="text-7xl text-white mt-3"><span v-text="distanciaJogador"></span></h1></div>
               <h1 class="mt-2 text-3xl text-zinc-600">m</h1>
             </div>
           </div>
@@ -88,12 +88,12 @@
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center top;
-   
   }
   
 </style>
   
 <script>
+  import axios from 'axios';
   import heatmap from 'heatmap.js'
   
   
@@ -102,13 +102,18 @@
     props: {
   
     },
+    data() {
+      return {
+        distanciaJogador: 0
+        }
+    },
     mounted() {
       const heatmapInstance = heatmap.create({
         
         container: this.$refs.heatmapContainer,
-        radius: 250,
-        maxOpacity: 0.7,
-        blur: 0.80,
+        radius: 150,
+        maxOpacity: 0.65,
+        blur: 0.95,
         gradient: {
           '.3': 'blue',
           '.5': 'green',
@@ -120,6 +125,7 @@
       heatmapInstance.setData({
         data: [
           {x: 100, y: 80, value: 200},
+          {x: 110, y: 80, value: 300},
           {x: 500, y: 800, value: 200},
           {x: 900, y: 500, value: 90},
           {x: 1000, y: 300, value: 110},
@@ -138,6 +144,20 @@
           // adicione mais dados aqui...
         ]
       })
+
+      setInterval(this.requisicaoDistancia, 1000);
+    },
+    methods: {
+      async requisicaoDistancia() {
+        try {
+          const response = await axios.get('http://127.0.0.1:5000/distance');
+          const payload = response.data;
+          this.distanciaJogador = payload.d_player.toFixed(2);
+          console.log(payload);
+        } catch (error) {
+          console.error(error);
+        }
+      }
     }
   }
 </script>

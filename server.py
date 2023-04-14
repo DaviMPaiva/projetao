@@ -24,10 +24,6 @@ my_consumer.start()
 def main():
     return 'server online'
 
-@app.route('/data', methods=['GET'])
-def get_data():
-    return DATA
-
 @app.route("/cam-ip", methods=["GET", "POST"])
 def cam_ip():
 
