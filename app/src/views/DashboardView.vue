@@ -56,7 +56,7 @@
               <h1>Velocidade do atleta</h1>
             </div>
             <div class="grid grid-cols-2 gap-2 justify-items-start">
-              <div><h1 class="text-7xl text-white mt-3">X</h1></div>
+              <div><h1 class="text-7xl text-white mt-3"><span v-text="speedJogador"></span></h1></div>
               <h1 class="mt-2 text-3xl text-zinc-600">m/s</h1>
             </div>
           </div>
@@ -104,7 +104,8 @@
     },
     data() {
       return {
-        distanciaJogador: 0
+        distanciaJogador: 0,
+        speedJogador:0
         }
     },
     mounted() {
@@ -145,7 +146,8 @@
         ]
       })
 
-      setInterval(this.requisicaoDistancia, 1000);
+      setInterval(this.requisicaoDistancia, 1500);
+      setInterval(this.requisicaoSpeed, 1500);
     },
     methods: {
       async requisicaoDistancia() {
@@ -153,6 +155,17 @@
           const response = await axios.get('http://127.0.0.1:5000/distance');
           const payload = response.data;
           this.distanciaJogador = payload.d_player.toFixed(2);
+          console.log(payload);
+        } catch (error) {
+          console.error(error);
+        }
+      },
+
+      async requisicaoSpeed() {
+        try {
+          const response = await axios.get('http://127.0.0.1:5000/speed');
+          const payload = response.data;
+          this.speedJogador = payload.d_player.toFixed(2);
           console.log(payload);
         } catch (error) {
           console.error(error);
