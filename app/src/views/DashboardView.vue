@@ -3,7 +3,7 @@
   
       <!--Heatmap-->
       <div ref="heatmapContainer" class="heatmap col-span-8 h-screen bg-zinc-800 justify-items-center">
-        
+        <heatmap />
       </div>
   
       <!--Painel de controle-->
@@ -95,59 +95,49 @@
 <script>
   import axios from 'axios';
   import heatmap from 'heatmap.js'
-  
-  
+
   export default {
     name: 'DashboardView',
-    props: {
-  
+    components: {
+      heatmap
     },
+    props: {},
+    
     data() {
       return {
         distanciaJogador: 0,
-        speedJogador:0
-        }
+        speedJogador: 0,
+        heatmapValues: [],
+        heatmapInstance: null
+      };
     },
     mounted() {
-      const heatmapInstance = heatmap.create({
-        
+      this.heatmapInstance = heatmap.create({
         container: this.$refs.heatmapContainer,
-        radius: 150,
-        maxOpacity: 0.65,
+        radius: 80,
         blur: 0.95,
+        width: 1600,
+        height: 1000,
+        minOpacity: 0,
+        maxOpacity: 0.5,
         gradient: {
           '.3': 'blue',
           '.5': 'green',
           '.8': 'yellow',
           '1': 'red'
         }
-      })
-  
-      heatmapInstance.setData({
+      });
+
+      this.heatmapInstance.setData({
         data: [
           {x: 100, y: 80, value: 200},
-          {x: 110, y: 80, value: 300},
-          {x: 500, y: 800, value: 200},
-          {x: 900, y: 500, value: 90},
-          {x: 1000, y: 300, value: 110},
-          {x: 400, y: 500, value: 120},
-          {x: 100, y: 500, value: 60},
-          {x: 800, y: 700, value: 40},
-          {x: 200, y: 800, value: 90},
-          {x: 500, y: 100, value: 100},
-          {x: 1000, y: 600, value: 110},
-          {x: 100, y: 200, value: 110},
-          {x: 700, y: 800, value: 120},
-          {x: 900, y: 300, value: 100},
-          {x: 500, y: 600, value: 80},
-          {x: 200, y: 100, value: 70}
-  
           // adicione mais dados aqui...
         ]
-      })
+      });
 
       setInterval(this.requisicaoDistancia, 1500);
       setInterval(this.requisicaoSpeed, 1500);
+      setInterval(this.requisicaoHeatmap, 3000);
     },
     methods: {
       async requisicaoDistancia() {
@@ -155,25 +145,38 @@
           const response = await axios.get('http://127.0.0.1:5000/distance');
           const payload = response.data;
           this.distanciaJogador = payload.d_player.toFixed(2);
+        } catch (error) {
+          console.error(error);
+        }
+      },
+      async requisicaoSpeed() {
+        try {
+          const response = await axios.get('http://127.0.0.1:5000/speed');
+          const payload = response.data;
           console.log(payload);
         } catch (error) {
           console.error(error);
         }
       },
 
-      async requisicaoSpeed() {
+      async requisicaoHeatmap() {
         try {
-          const response = await axios.get('http://127.0.0.1:5000/speed');
+          const response = await axios.get('http://127.0.0.1:5000/heatmap');
           const payload = response.data;
-          this.speedJogador = payload.d_player.toFixed(2);
-          console.log(payload);
+          console.log('heatmap ',payload.d_player);
+          this.heatmapInstance.setData({
+            data: payload.d_player
+          });
         } catch (error) {
           console.error(error);
         }
-      }
+      },
+
     }
   }
 </script>
-  
+
+
+
   
   

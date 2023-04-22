@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from inference import Inference,Data,Consumer,VideoStream
 from flask_cors import CORS
 import threading
+import numpy as np
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:8080"}})
 
@@ -79,14 +80,33 @@ def coordinates():
 
 @app.route("/heatmap", methods=['GET', 'POST'])
 def heatmap():
+    data1 = my_consumer.GetIndividualHeatmap(1)
+    data1 = np.array(data1)
+    data1 = data1.astype(float).tolist()
+    #new_data1 = [{'x': int(800-data1[i][0]), 'y': int(data1[i][1]), 'value': 1} for i in range(len(data1))]
+    new_data1 =[{'x':0,'y':0,'value':0.1},{'x':1600,'y':0,'value':0.1},
+                {'x':1600,'y':1000,'value':0.1},{'x':0,'y':1000,'value':0.1}
+                ]
+    data2 = my_consumer.GetIndividualHeatmap(2)
+    data2 = np.array(data2)
+    data2 = data2.astype(float).tolist()
+    new_data2 = [{'x': int(800-data2[i][0]), 'y': int(data2[i][1]), 'value': 1} for i in range(len(data2))]
+   
+    print("heatmap size: ")
+    print(len(new_data1))
+    print(len(new_data2))
+
+    payload = {
+            'd_player':new_data1,
+            'd_opponent':new_data2
+        }
+
+
     if request.method == 'POST':
-        HEATMAP_BUFFER.append(request.form('img'))
+        return jsonify(payload)
 
     if request.method == 'GET':
-        if len(HEATMAP_BUFFER) > 0:
-            return jsonify(HEATMAP_BUFFER)
-        else:
-            'No Heatmaps found', 404 
+        return jsonify(payload)
 
 @app.route("/distance", methods=['GET'])
 def distance():
