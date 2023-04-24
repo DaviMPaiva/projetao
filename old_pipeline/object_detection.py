@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+from numba import jit, cuda
 
 class ObjectDetection:
     def __init__(self, weights_path="dnn_model/yolov4.weights", cfg_path="dnn_model/yolov4.cfg"):
@@ -33,7 +33,7 @@ class ObjectDetection:
 
         self.colors = np.random.uniform(0, 255, size=(80, 3))
         return self.classes
-
+    @jit(target_backend='cuda')   
     def detect(self, frame):
         return self.model.detect(frame, nmsThreshold=self.nmsThreshold, confThreshold=self.confThreshold)
 

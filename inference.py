@@ -1,14 +1,17 @@
+from xmlrpc.client import Boolean
 import cv2
 import time
 from old_pipeline.object_detection import ObjectDetection
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import threading
 import pickle
 import json
 from old_pipeline.tracker import Tracker
 from player import Player
-
+from mplsoccer.pitch import Pitch
+import pandas as pd 
 class Inference(threading.Thread):
     def __init__(self, path1, path2,data,vs1,vs2,isStream):
         threading.Thread.__init__(self)
@@ -22,7 +25,7 @@ class Inference(threading.Thread):
         self.vs1 = vs1
         self.vs2 = vs2
         self.isStream = isStream
-
+        self.ret1 = True
     def GetInference(self,frame_rec):
             center_points_cur_frame = []
             
@@ -65,15 +68,15 @@ class Inference(threading.Thread):
 
                     ids.append({"point":(cx,by),"id":track_id})
 
-                    #cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    cv2.rectangle(frame_rec, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                    #cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
+                    cv2.circle(frame_rec, (cx,by), 5, (0, 0, 255), -1)
                     #cv2.putText(frame_rec, str(track_id), (cx, cy - 7), 0, 1, (0, 0, 255), 2)
                 
-                #cv2.imshow("Frame", frame_rec)
+                cv2.imshow("Frame", frame_rec)
                 return ids
             else:
-                #cv2.imshow("Frame", frame_rec)
+                cv2.imshow("Frame", frame_rec)
                 return []
     
     def GetCorners(self,img):
@@ -145,16 +148,15 @@ class Inference(threading.Thread):
         while True:
             # Read frame from video stream
             if self.isStream:
-                ret1, frame1 = self.vs1.read()#capture1.read()
+                self.ret1, frame1 = self.vs1.read()#capture1.read()
                 ret2, frame2 = self.vs2.read()#capture1.read()
             else:
-                ret1, frame1 = capture1.read()
+                self.ret1, frame1 = capture1.read()
                 ret2, frame2 = capture2.read()  
 
             # Check if frame was successfully read
-            if not ret2 or not ret1:
-                continue #if there is a missing frame
-
+            if not ret2 or not self.ret1:
+                continue #if there is a missing frame 
             current_time1 = time.time()
 
             height = 720
@@ -212,7 +214,8 @@ class Inference(threading.Thread):
         capture1.release()
         capture2.release()
         cv2.destroyAllWindows()
-
+    def GetRet1(self)-> Boolean:
+        return self.ret1
 class Data:
     def __init__(self,lock):
         # Create the final_frame array as a private variable
@@ -249,7 +252,7 @@ class Consumer(threading.Thread):
         self.data = data
         self.players:dict[Player] = dict()
         self.last_worked_frame:int = 0
-
+        self.itsOver = False
     def update_players(self):
         player_ids = self.players.keys() 
         player_ids = [id for id in player_ids]
@@ -268,55 +271,45 @@ class Consumer(threading.Thread):
              
         return      
         
-
+    def inferenceDone (self) -> None:
+        self.itsOver = True
 
     def GetHeatmap(self) -> None:
-
         temp = self.data.read_frame()
+        if self.itsOver:
+            pd.DataFrame(temp).to_csv("pos.csv")
+        
         print(type(temp))
         if len(temp)>0:print(temp[0])
-        points_array_x = [item['point'][0] for item in temp]
+        points_array_x = [item['point'][0] for item in temp] 
         points_array_y = [item['point'][1] for item in temp]
-        plt.scatter(points_array_x, points_array_y)
-        plt.xlim([0, 1000])
-        plt.ylim([0, 800])
-        # Set the title and labels for the plot
-        plt.title('Scatter Plot of Data')
-        plt.xlabel('X Position')
-        plt.ylabel('Y Position')
-
+        id = [item['id'] for item in temp]
+        p1x = []
+        p1y = []
+        p2x = []
+        p2y = []
+        id1 = []
+        id2 = []
+        for x in range(len(points_array_x)):
+            if x % 2 ==0:
+                 p1x.append(points_array_x[x])
+                 p1y.append(points_array_y[x])
+                 id1.append(0)
+            else:
+                p2x.append(points_array_x[x])
+                p2y.append(points_array_y[x])
+                id2.append(1)
+        p1x = [20+(i /12) for i in p1x]
+        p2x = [100-i /10 for i in p2x]
+        p1y = [i /16 for i in p1y]
+        p2y = [100-i /15 for i in p2y]
+        pitch = Pitch(pitch_type='opta',pitch_color='black',line_color='white',line_zorder=2)
+        fig, ax = pitch.draw(figsize=(7, 4))
+        fig.set_facecolor('black')
+        customcmap= matplotlib.colors.LinearSegmentedColormap.from_list('custom cmap',['black','red'])
+        pitch.kdeplot(np.concatenate((p1y, p2y)), np.concatenate((p1x, p2x)), ax=ax,fill=True,cmap=customcmap,zorder=1,n_levels=100)
+        pitch.scatter( np.concatenate((p1y, p2y)), np.concatenate((p1x, p2x)), c = np.concatenate((id1, id2)), cmap='gray',s=80, ec='k', ax=ax)
         plt.show()
-
-        """
-        # Load the background image
-        bg = plt.imread('futsal.png')
-        height, width, channels = bg.shape
-
-        # Define the range of the x and y coordinates
-        xmin, xmax =  (0,width)
-        ymin, ymax =  (0,height)
-
-        print("width: " + str(width) + " height: " + str(height))
-
-        # Create a figure with the same aspect ratio as the background image
-        fig, ax = plt.subplots(figsize=(bg.shape[1]/100,bg.shape[0]/100))
-
-        # Plot the background image
-        ax.imshow(bg)
-
-        # Convert the coordinates to a heatmap using the histogram2d function
-        heatmap, xedges, yedges = np.histogram2d(points_array_x, points_array_y, bins=50, range=[[xmin, xmax], [ymin, ymax]])
-
-        # Plot the heatmap using imshow function
-        ax.imshow(heatmap.T, extent=[xmin, xmax, ymin, ymax], cmap='viridis', alpha=0.5)
-
-        # Set the x and y axis limits
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
-
-        # Show the plot
-        plt.show()
-        """
 
 class VideoStream:
     def __init__(self, url):
@@ -338,10 +331,10 @@ lock = threading.Lock()
 data = Data(lock)
 
 #create the producer
-my_thread = Inference('guga1.mp4', 'guga2_flip.mp4', data,vs1,vs2,isStream=True)
+my_thread = Inference('guga1.mp4', 'guga2_flip.mp4', data,vs1,vs2,isStream=False)
 my_thread.start()
 
-#create the consumer
+#create the consume
 my_consumer = Consumer(data)
 my_consumer.start()
 
@@ -349,6 +342,8 @@ while True:
     #try:
     print("trying to get heatmap")
     my_consumer.GetHeatmap()
+    if not my_thread.GetRet1():
+        my_consumer.inferenceDone()
     time.sleep(20)  # wait for 2 seconds before running the function again
     #except:
     #    print('passouuuuuu')
