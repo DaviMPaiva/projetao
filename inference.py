@@ -343,7 +343,7 @@ class Consumer(threading.Thread):
             elapsed_time_s = (tail["time"] - p1["time"]) / 100
             elapsed_distance_m = self.GetRealDistance(tail["point"][0],tail["point"][1],p1["point"][0],p1["point"][1]) / 100
             return elapsed_distance_m/elapsed_time_s #km/h na vdd, mas n sei pq 
-        return -1
+        return 0
     
     def GetDistanceTraveled_m(self,id):
         ids = self.GetIdPos(id)

@@ -84,7 +84,9 @@ def heatmap():
     data1 = np.array(data1)
     data1 = data1.astype(float).tolist()
     new_data1 = [{'x': int(800-data1[i][0]), 'y': int(data1[i][1]), 'value': 1} for i in range(len(data1))]
-
+    new_data1 =[{'x':0,'y':0,'value':0.1},{'x':1600,'y':0,'value':0.1},
+                {'x':1600,'y':1000,'value':0.1},{'x':0,'y':1000,'value':0.1}
+                ]
     data2 = my_consumer.GetIndividualHeatmap(2)
     data2 = np.array(data2)
     data2 = data2.astype(float).tolist()
